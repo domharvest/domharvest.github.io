@@ -1,10 +1,13 @@
-title: Jekyll Serial Programmer
+title: Max B. - Web Scraping & Automation
+description: Building reliable, production-ready data extraction tools. Technical blog on web scraping, automation, and browser automation with Playwright.
+url: "https://domharvest.github.io"
+baseurl: ""
 markdown: kramdown
 
 # for atom feed
 author:
-  name: Sharad Raj Singh Maurya
-  email: dev_sharad@outlook.com
+  name: Max B.
+  email: max.yterb@gmail.com
 
 plugins:
   - jemoji

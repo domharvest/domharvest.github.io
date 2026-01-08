@@ -58,8 +58,10 @@ header {
 }
 main {
   margin: 0 auto;
-  max-width: 650px;
-  padding: 3rem 0 4rem 0;
+  max-width: 1020px;
+  padding: 3rem 2rem 4rem 2rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 .article {
   margin-bottom: 3rem;
@@ -253,8 +255,47 @@ main {
   border: 2px solid white;
 }
 
+/* Tablet landscape */
+@media screen and (max-width: 1100px) {
+  main {
+    max-width: 90%;
+    padding: 3rem 1.5rem 4rem 1.5rem;
+  }
+}
+
+/* Tablet portrait */
+@media screen and (max-width: 900px) {
+  main {
+    max-width: 95%;
+    padding: 2.5rem 1.5rem 4rem 1.5rem;
+  }
+  .site-title {
+    font-size: 1.2rem;
+  }
+  .article-title {
+    font-size: 2rem;
+  }
+}
+
+/* Mobile landscape */
 @media screen and (max-width: 750px) {
-  body {
-    padding: 1.5rem;
+  main {
+    padding: 2rem 1rem 4rem 1rem;
+  }
+  .site-title {
+    font-size: 1.1rem;
+  }
+  .article-title {
+    font-size: 1.8rem;
+  }
+}
+
+/* Mobile portrait */
+@media screen and (max-width: 550px) {
+  main {
+    padding: 1.5rem 1rem 3rem 1rem;
+  }
+  .article-title {
+    font-size: 1.6rem;
   }
 }

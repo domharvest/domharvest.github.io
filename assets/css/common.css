@@ -179,3 +179,28 @@ pre:hover .copy-code-button {
     background-color: var(--gray-3);
   }
 }
+
+/* Footer */
+footer {
+  margin-top: 4rem;
+  padding: 2rem 0;
+  text-align: center;
+  border-top: 1px solid var(--gray-3);
+  color: var(--white-2);
+  font-size: 0.9rem;
+}
+
+footer p {
+  margin: 0.5rem 0;
+}
+
+footer a {
+  color: var(--white-2);
+  text-decoration: none;
+  padding: 0 0.5rem;
+  transition: color 0.2s ease-in-out;
+}
+
+footer a:hover {
+  color: var(--white-1);
+}

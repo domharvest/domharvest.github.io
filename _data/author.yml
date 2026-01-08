@@ -1,23 +1,20 @@
-name: Sharad Raj
-dp: https://avatars2.githubusercontent.com/u/36638057?s=460&u=0cbe4fd6b5a3655d91b3eb86db834d0829a0c086&v=4
+name: Max B.
+dp: https://github.com/domharvest.png
 description: "
   <p>
-    Developed by Sharad Raj who lives in India building useful things for the world.
+    Web Scraping & Automation Specialist building reliable, production-ready data extraction tools.
   </p>
-  <br/>
   <p>
-    You should follow him on <a href='https://github.com/sharadcodes' target='_blank'>Github</a>
-  </P>
+    Creator of <a href='https://github.com/domharvest/domharvest-playwright' target='_blank'>domharvest-playwright</a> -
+    a powerful DOM harvesting tool built with Playwright.
+  </p>
+  <p>
+    Available for remote work. Based in Colombia.
+  </p>
 "
-email: dev_sharad@outlook.com
+email: max.yterb@gmail.com
 contact:
-  - title: linkedin
-    url: https://www.linkedin.com/in/srsmaurya
   - title: github
-    url: https://github.com/sharadcodes
-  - title: twitter
-    url: https://twitter.com/iamsharadraj
-  - title: dev
-    url: https://dev.to/sharadcodes
+    url: https://github.com/domharvest
   - title: email
-    url: mailto:dev_sharad@outlook.com
+    url: mailto:max.yterb@gmail.com
