@@ -1,5 +1,5 @@
 name: Max B.
-dp: https://github.com/domharvest.png
+dp: /assets/images/logo.png
 description: "
   <p>
     Web Scraping & Automation Specialist building reliable, production-ready data extraction tools.
@@ -16,5 +16,9 @@ email: max.yterb@gmail.com
 contact:
   - title: github
     url: https://github.com/domharvest
+  - title: mastodon
+    url: https://infosec.exchange/@domharvest
+  - title: upwork
+    url: https://www.upwork.com/freelancers/~01078f41febd68ab32
   - title: email
     url: mailto:max.yterb@gmail.com
