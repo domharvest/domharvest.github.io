@@ -7,20 +7,22 @@ categories: ["web-scraping", "playwright", "tutorial", "javascript"]
 
 # Web Scraping Made Simple: A Practical Guide to domharvest-playwright
 
-Web scraping doesn't need to be complicated. While powerful tools like Playwright give you complete control over browser automation, they often require significant boilerplate code for common scraping tasks. That's where **domharvest-playwright** comes in—a focused library that makes DOM extraction intuitive without sacrificing Playwright's power.
+Web scraping doesn't need to be complicated. While powerful tools like Playwright give you complete control over browser automation, they often require significant boilerplate code for common scraping tasks. That's where **domharvest-playwright** comes in—a production-ready library that wraps Playwright's power with built-in retry logic, rate limiting, batch processing, and enhanced error handling.
 
 In this practical guide, I'll walk you through everything you need to know to start scraping websites efficiently with domharvest-playwright.
 
 ## What is domharvest-playwright?
 
-domharvest-playwright is a lightweight wrapper around Playwright that specializes in one thing: extracting structured data from web pages. It provides a clean, intuitive API for the most common scraping scenarios while still giving you access to Playwright's full capabilities when you need them.
+domharvest-playwright is a lightweight wrapper around Playwright that specializes in extracting structured data from web pages. Unlike raw Playwright, it comes with production features out of the box:
 
-**Key benefits:**
-- Simple one-function API for quick scraping tasks
-- Automatic resource management (no forgotten browser instances)
-- CSS selector-based extraction with custom transformations
-- Cross-browser support (Chromium, Firefox, WebKit)
-- Built with modern JavaScript (ES modules)
+**Built-in features:**
+- Automatic retry logic with exponential and linear backoff
+- Built-in rate limiting (global or per-domain)
+- Batch processing with configurable concurrency
+- Enhanced error handling with custom error classes
+- Structured logging at multiple levels
+- Screenshot capture during extraction
+- Support for proxies, custom headers, and cookies
 
 ## Installation and Setup
 
@@ -105,142 +107,115 @@ The beauty of this approach is that you don't need to worry about:
 
 It's all handled automatically.
 
-## Scraping Product Data
+## Using the DOMHarvester Class for More Control
 
-Let's try something more complex: extracting product information from an e-commerce site. We'll use [books.toscrape.com](https://books.toscrape.com/):
-
-```javascript
-import { harvest } from 'domharvest-playwright'
-
-const books = await harvest(
-  'https://books.toscrape.com/',
-  '.product_pod',
-  (el) => ({
-    title: el.querySelector('h3 a')?.getAttribute('title'),
-    price: el.querySelector('.price_color')?.textContent?.trim(),
-    availability: el.querySelector('.availability')?.textContent?.trim(),
-    rating: el.querySelector('.star-rating')?.className.split(' ')[1],
-    imageUrl: el.querySelector('img')?.getAttribute('src')
-  })
-)
-
-console.log(`Found ${books.length} books`)
-console.log(books[0])
-```
-
-**Output:**
-```javascript
-{
-  title: 'A Light in the Attic',
-  price: '£51.77',
-  availability: 'In stock',
-  rating: 'Three',
-  imageUrl: 'media/cache/2c/da/2cdad67c44b002e7ead0cc35693c0e8b.jpg'
-}
-```
-
-This demonstrates extracting multiple data points from each product, including attributes and nested elements.
-
-## Advanced: Scraping Multiple Pages
-
-For real-world scraping, you often need to visit multiple pages. When doing this, use the `DOMHarvester` class to reuse the same browser instance—it's much more efficient than creating a new browser for each page.
+For production use cases, you'll want to use the `DOMHarvester` class which gives you access to all configuration options:
 
 ```javascript
 import { DOMHarvester } from 'domharvest-playwright'
 
-async function scrapeMultiplePages(maxPages = 3) {
-  const harvester = new DOMHarvester({ headless: true })
-  await harvester.init()
+const harvester = new DOMHarvester({
+  headless: true,
+  timeout: 30000,
+  rateLimit: { requestsPerSecond: 2 }, // Built-in rate limiting
+  logging: { level: 'info' },
+  retries: 3, // Will retry failed requests
+  backoff: 'exponential' // Exponential backoff between retries
+})
 
-  const allQuotes = []
-
-  try {
-    for (let page = 1; page <= maxPages; page++) {
-      console.log(`Scraping page ${page}...`)
-
-      const quotes = await harvester.harvest(
-        `https://quotes.toscrape.com/page/${page}/`,
-        '.quote',
-        (el) => ({
-          text: el.querySelector('.text')?.textContent?.trim(),
-          author: el.querySelector('.author')?.textContent?.trim()
-        })
-      )
-
-      allQuotes.push(...quotes)
-
-      // Be respectful: wait 1 second between requests
-      await new Promise(resolve => setTimeout(resolve, 1000))
-    }
-
-    console.log(`Total quotes collected: ${allQuotes.length}`)
-    return allQuotes
-  } finally {
-    // Always close the browser to prevent memory leaks
-    await harvester.close()
-  }
-}
-
-const quotes = await scrapeMultiplePages(3)
-```
-
-**Key points:**
-- Create a `DOMHarvester` instance once
-- Call `init()` before using it
-- Reuse it for multiple pages
-- Always use `try/finally` to ensure cleanup
-- Add delays between requests to be respectful to the server
-
-## Filtering and Transforming Data
-
-Often, you don't want all the data—you want to filter and transform it. Let's find only top-rated books that are in stock:
-
-```javascript
-import { DOMHarvester } from 'domharvest-playwright'
-
-const harvester = new DOMHarvester()
 await harvester.init()
 
 try {
-  const books = await harvester.harvest(
-    'https://books.toscrape.com/',
-    '.product_pod',
+  const quotes = await harvester.harvest(
+    'https://quotes.toscrape.com/',
+    '.quote',
     (el) => ({
-      title: el.querySelector('h3 a')?.getAttribute('title'),
-      price: parseFloat(
-        el.querySelector('.price_color')?.textContent?.replace(/[^0-9.]/g, '') || '0'
-      ),
-      rating: el.querySelector('.star-rating')?.className.split(' ')[1],
-      inStock: el.querySelector('.availability')?.textContent?.includes('In stock')
+      text: el.querySelector('.text')?.textContent?.trim(),
+      author: el.querySelector('.author')?.textContent?.trim()
     })
   )
 
-  // Filter for top-rated books in stock
-  const topBooks = books
-    .filter(book => book.inStock && ['Four', 'Five'].includes(book.rating))
-    .sort((a, b) => b.price - a.price)
-
-  console.log(`Found ${topBooks.length} top-rated books in stock:`)
-  topBooks.forEach(book => {
-    console.log(`- ${book.title} (${book.rating} stars) - £${book.price}`)
-  })
+  console.log(`Extracted ${quotes.length} quotes`)
 } finally {
   await harvester.close()
 }
 ```
 
-This example shows how to:
-- Parse numeric data (converting price string to number)
-- Filter results based on multiple criteria
-- Sort the results
+## Built-in Retry Logic
+
+One of the most powerful features is automatic retry with backoff:
+
+```javascript
+const harvester = new DOMHarvester({
+  retries: 3,
+  backoff: 'exponential' // or 'linear'
+})
+
+await harvester.init()
+
+try {
+  // This will automatically retry up to 3 times if it fails
+  const data = await harvester.harvest(
+    'https://example.com',
+    '.content',
+    (el) => ({ text: el.textContent })
+  )
+} finally {
+  await harvester.close()
+}
+```
+
+The library handles transient failures automatically with configurable backoff strategies.
+
+## Batch Processing Multiple URLs
+
+Need to scrape multiple pages? Use `harvestBatch()` with built-in concurrency control:
+
+```javascript
+const harvester = new DOMHarvester({
+  rateLimit: { requestsPerSecond: 2 }
+})
+
+await harvester.init()
+
+try {
+  const configs = [
+    {
+      url: 'https://quotes.toscrape.com/page/1/',
+      selector: '.quote',
+      extractor: (el) => ({
+        text: el.querySelector('.text')?.textContent?.trim(),
+        author: el.querySelector('.author')?.textContent?.trim()
+      })
+    },
+    {
+      url: 'https://quotes.toscrape.com/page/2/',
+      selector: '.quote',
+      extractor: (el) => ({
+        text: el.querySelector('.text')?.textContent?.trim(),
+        author: el.querySelector('.author')?.textContent?.trim()
+      })
+    }
+  ]
+
+  const results = await harvester.harvestBatch(configs, {
+    concurrency: 3,
+    onProgress: (completed, total) => {
+      console.log(`Progress: ${completed}/${total}`)
+    }
+  })
+
+  console.log(`Scraped ${results.length} pages`)
+} finally {
+  await harvester.close()
+}
+```
 
 ## Custom Page Analysis with harvestCustom()
 
 Sometimes you need more control than CSS selectors provide. The `harvestCustom()` method lets you run arbitrary JavaScript in the browser context:
 
 ```javascript
-import { DOMHarvester } from 'domharvest-playwright'
-
 const harvester = new DOMHarvester()
 await harvester.init()
 
@@ -255,10 +230,6 @@ try {
         uniqueAuthors: Array.from(new Set(
           Array.from(document.querySelectorAll('.author'))
             .map(a => a.textContent?.trim())
-        )),
-        allTags: Array.from(new Set(
-          Array.from(document.querySelectorAll('.tag'))
-            .map(t => t.textContent?.trim())
         )),
         hasNextPage: document.querySelector('.next') !== null
       }
@@ -276,138 +247,159 @@ try {
 - You don't have access to Node.js modules or outer scope variables
 - The function must be self-contained
 
-## Extracting Table Data
+## Screenshot Capture
 
-Tables are a common source of structured data. Here's how to handle them:
+Capture screenshots during or after extraction:
 
 ```javascript
-import { DOMHarvester } from 'domharvest-playwright'
-
 const harvester = new DOMHarvester()
 await harvester.init()
 
 try {
-  const tableData = await harvester.harvestCustom(
-    'https://example.com/data-table',
-    () => {
-      const rows = Array.from(document.querySelectorAll('table tbody tr'))
-
-      return rows.map(tr => {
-        const cells = Array.from(tr.querySelectorAll('td'))
-        return {
-          column1: cells[0]?.textContent?.trim(),
-          column2: cells[1]?.textContent?.trim(),
-          column3: cells[2]?.textContent?.trim()
-        }
-      })
-    }
+  // Capture screenshot of a specific page
+  const screenshot = await harvester.screenshot(
+    'https://quotes.toscrape.com/',
+    { path: 'quotes.png', fullPage: true },
+    { waitForLoadState: 'networkidle' }
   )
 
-  console.log(`Extracted ${tableData.length} rows`)
+  console.log('Screenshot saved')
 } finally {
   await harvester.close()
 }
 ```
 
-## Saving Your Data
+## Enhanced Error Handling
 
-Once you've scraped the data, you'll want to save it. Here's how to export to JSON and CSV:
+The library provides custom error classes for better error handling:
 
 ```javascript
-import { harvest } from 'domharvest-playwright'
-import { writeFile } from 'fs/promises'
+import { DOMHarvester, TimeoutError, NavigationError, ExtractionError } from 'domharvest-playwright'
 
-const quotes = await harvest(
-  'https://quotes.toscrape.com/',
-  '.quote',
-  (el) => ({
-    text: el.querySelector('.text')?.textContent?.trim(),
-    author: el.querySelector('.author')?.textContent?.trim(),
-    tags: Array.from(el.querySelectorAll('.tag')).map(tag => tag.textContent?.trim())
-  })
-)
+const harvester = new DOMHarvester({
+  onError: (error) => {
+    console.error('Scraping error:', error.message)
+  }
+})
 
-// Save as JSON
-await writeFile(
-  'quotes.json',
-  JSON.stringify(quotes, null, 2),
-  'utf-8'
-)
+await harvester.init()
 
-// Save as CSV
-const csv = [
-  'text,author,tags',
-  ...quotes.map(q =>
-    `"${q.text}","${q.author}","${q.tags.join('; ')}"`
+try {
+  const data = await harvester.harvest(
+    'https://example.com',
+    '.content',
+    (el) => ({ text: el.textContent })
   )
-].join('\n')
-
-await writeFile('quotes.csv', csv, 'utf-8')
-
-console.log(`Saved ${quotes.length} quotes to files`)
+} catch (error) {
+  if (error instanceof TimeoutError) {
+    console.error('Page took too long to load:', error.url)
+  } else if (error instanceof NavigationError) {
+    console.error('Failed to navigate:', error.url, error.cause)
+  } else if (error instanceof ExtractionError) {
+    console.error('Failed to extract data:', error.selector, error.operation)
+  }
+} finally {
+  await harvester.close()
+}
 ```
 
 ## Configuration Options
 
-domharvest-playwright provides two main configuration options:
+domharvest-playwright provides extensive configuration:
 
-### headless Mode
-
-By default, the browser runs in headless mode (invisible). For debugging, you can make it visible:
+### Constructor Options
 
 ```javascript
-const harvester = new DOMHarvester({ headless: false })
+const harvester = new DOMHarvester({
+  // Browser settings
+  headless: true,
+  timeout: 30000,
+
+  // Rate limiting
+  rateLimit: {
+    requestsPerSecond: 2,
+    perDomain: true // Rate limit per domain
+  },
+
+  // Retry configuration
+  retries: 3,
+  backoff: 'exponential', // or 'linear'
+
+  // Logging
+  logging: {
+    level: 'info' // 'debug', 'info', 'warn', 'error'
+  },
+
+  // Error handling
+  onError: (error) => console.error(error),
+
+  // Browser customization
+  proxy: { server: 'http://proxy.example.com:8080' },
+  viewport: { width: 1920, height: 1080 },
+  userAgent: 'Custom User Agent',
+  extraHTTPHeaders: { 'X-Custom-Header': 'value' },
+
+  // Environment
+  locale: 'en-US',
+  timezoneId: 'America/New_York',
+  geolocation: { latitude: 40.7128, longitude: -74.0060 },
+
+  // JavaScript execution
+  javaScriptEnabled: true
+})
 ```
 
-This lets you watch the browser navigate and interact with pages, which is invaluable for troubleshooting.
-
-### timeout
-
-The default timeout is 30 seconds. Adjust it based on your target sites:
+### Harvest Method Options
 
 ```javascript
-// For fast, static pages
-const fastHarvester = new DOMHarvester({ timeout: 10000 })
-
-// For slow, dynamic content
-const slowHarvester = new DOMHarvester({ timeout: 60000 })
+await harvester.harvest(url, selector, extractor, {
+  retries: 5, // Override global retry setting
+  waitForLoadState: 'networkidle', // or 'load', 'domcontentloaded'
+  waitForSelector: '.dynamic-content', // Wait for specific element
+  screenshot: { path: 'page.png' } // Capture screenshot during extraction
+})
 ```
 
-## Error Handling
+## Rate Limiting
 
-Always handle errors gracefully to avoid crashes:
+Built-in rate limiting prevents overwhelming target servers:
 
 ```javascript
-import { DOMHarvester } from 'domharvest-playwright'
+// Global rate limiting
+const harvester = new DOMHarvester({
+  rateLimit: { requestsPerSecond: 2 }
+})
 
-const harvester = new DOMHarvester()
-
-try {
-  await harvester.init()
-
-  const data = await harvester.harvest(
-    'https://example.com',
-    '.some-selector',
-    (el) => ({ text: el.textContent })
-  )
-
-  console.log('Success:', data)
-} catch (error) {
-  console.error('Scraping failed:', error.message)
-
-  // Handle specific errors
-  if (error.message.includes('timeout')) {
-    console.error('Page took too long to load. Try increasing timeout.')
+// Per-domain rate limiting
+const harvester2 = new DOMHarvester({
+  rateLimit: {
+    requestsPerSecond: 2,
+    perDomain: true // Different rate limits per domain
   }
-} finally {
-  // Always close, even if there was an error
-  await harvester.close()
-}
+})
+```
+
+The library automatically handles request throttling—you don't need to add manual delays.
+
+## Structured Logging
+
+Monitor your scraping operations with built-in logging:
+
+```javascript
+const harvester = new DOMHarvester({
+  logging: {
+    level: 'debug' // Detailed logging
+  }
+})
+
+// Logs will show:
+// - Navigation events
+// - Retry attempts
+// - Rate limiting delays
+// - Errors and warnings
 ```
 
 ## Best Practices
-
-Based on my experience with domharvest-playwright, here are some key recommendations:
 
 ### 1. Always Close Resources
 
@@ -423,142 +415,102 @@ try {
 }
 ```
 
-### 2. Reuse Harvester Instances
+### 2. Use Built-in Rate Limiting
 
-For multiple pages, create one instance and reuse it:
+Don't add manual delays—use the built-in rate limiter:
 
 ```javascript
-// Good: One browser instance
-const harvester = new DOMHarvester()
-await harvester.init()
+// Good: Built-in rate limiting
+const harvester = new DOMHarvester({
+  rateLimit: { requestsPerSecond: 2 }
+})
+
+// Not needed: Manual delays
+await new Promise(resolve => setTimeout(resolve, 1000))
+```
+
+### 3. Let Retry Logic Handle Failures
+
+Configure retries instead of writing manual retry logic:
+
+```javascript
+const harvester = new DOMHarvester({
+  retries: 3,
+  backoff: 'exponential'
+})
+// Failures are automatically retried
+```
+
+### 4. Use Batch Processing for Multiple URLs
+
+Use `harvestBatch()` instead of loops:
+
+```javascript
+// Good: Batch processing with concurrency control
+await harvester.harvestBatch(configs, { concurrency: 3 })
+
+// Less efficient: Sequential processing
 for (const url of urls) {
   await harvester.harvest(url, selector, extractor)
 }
-await harvester.close()
-
-// Bad: Creates a new browser for each page
-for (const url of urls) {
-  const data = await harvest(url, selector, extractor)
-}
 ```
 
-### 3. Be Respectful with Rate Limiting
+### 5. Monitor with Structured Logging
 
-Always add delays between requests:
+Enable logging for production deployments:
 
 ```javascript
-for (const url of urls) {
-  await harvester.harvest(url, selector, extractor)
-  await new Promise(resolve => setTimeout(resolve, 1000)) // 1 second delay
-}
+const harvester = new DOMHarvester({
+  logging: { level: 'info' },
+  onError: (error) => {
+    // Send to your monitoring system
+    logToMonitoring(error)
+  }
+})
 ```
 
-### 4. Check robots.txt
+## Real-World Example: Product Monitoring
 
-Before scraping a site, check its `robots.txt` file to ensure you're allowed to scrape it:
-
-```
-https://example.com/robots.txt
-```
-
-### 5. Use harvest() for Quick Tasks
-
-For one-off scraping, the simple function is perfect:
-
-```javascript
-// Quick and clean
-const data = await harvest(url, selector, extractor)
-```
-
-### 6. Use DOMHarvester for Multiple Operations
-
-For anything more complex, use the class:
-
-```javascript
-const harvester = new DOMHarvester()
-await harvester.init()
-// ... multiple operations
-await harvester.close()
-```
-
-## Troubleshooting Common Issues
-
-### Browser Installation Failed
-
-If Playwright can't install browsers, try:
-
-```bash
-# Use sudo on Linux/macOS
-sudo npx playwright install
-
-# Or set a custom directory
-PLAYWRIGHT_BROWSERS_PATH=~/pw-browsers npx playwright install
-```
-
-### Timeout Errors
-
-If pages are timing out:
-
-1. Increase the timeout: `new DOMHarvester({ timeout: 60000 })`
-2. Check if the page loads in a regular browser
-3. Try with headless mode off to see what's happening
-
-### Elements Not Found
-
-If your selector returns empty results:
-
-1. Run with `headless: false` to inspect the page
-2. Use browser DevTools to test your selectors
-3. Check if content loads dynamically (might need `harvestCustom()` with waits)
-
-### Memory Leaks
-
-If your script consumes increasing memory:
-
-1. Ensure you're calling `close()` in a `finally` block
-2. Don't create multiple harvester instances unnecessarily
-3. For long-running processes, consider restarting the harvester periodically
-
-## Real-World Example: Price Monitoring
-
-Let's build a practical price monitoring scraper:
+Here's a complete example using all the production features:
 
 ```javascript
 import { DOMHarvester } from 'domharvest-playwright'
 import { writeFile } from 'fs/promises'
 
-async function monitorPrices(urls) {
-  const harvester = new DOMHarvester({ headless: true })
+async function monitorProducts(urls) {
+  const harvester = new DOMHarvester({
+    headless: true,
+    timeout: 30000,
+    rateLimit: { requestsPerSecond: 2, perDomain: true },
+    retries: 3,
+    backoff: 'exponential',
+    logging: { level: 'info' },
+    onError: (error) => console.error('Scraping error:', error.message)
+  })
+
   await harvester.init()
 
-  const results = []
-
   try {
-    for (const url of urls) {
-      console.log(`Checking ${url}...`)
+    const configs = urls.map(url => ({
+      url,
+      selector: 'body',
+      extractor: () => ({
+        title: document.querySelector('h1')?.textContent?.trim(),
+        price: document.querySelector('.price')?.textContent?.trim(),
+        availability: document.querySelector('.stock')?.textContent?.trim(),
+        timestamp: new Date().toISOString()
+      })
+    }))
 
-      try {
-        const product = await harvester.harvestCustom(url, () => {
-          return {
-            title: document.querySelector('h1')?.textContent?.trim(),
-            price: document.querySelector('.price')?.textContent?.trim(),
-            availability: document.querySelector('.stock')?.textContent?.trim(),
-            timestamp: new Date().toISOString()
-          }
-        })
-
-        results.push({ url, ...product, error: null })
-      } catch (error) {
-        results.push({ url, error: error.message })
+    const results = await harvester.harvestBatch(configs, {
+      concurrency: 3,
+      onProgress: (completed, total) => {
+        console.log(`Progress: ${completed}/${total}`)
       }
+    })
 
-      // Rate limiting
-      await new Promise(resolve => setTimeout(resolve, 2000))
-    }
-
-    // Save results
     await writeFile(
-      `prices-${Date.now()}.json`,
+      `products-${Date.now()}.json`,
       JSON.stringify(results, null, 2)
     )
 
@@ -569,44 +521,27 @@ async function monitorPrices(urls) {
   }
 }
 
-// Usage
 const urls = [
   'https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html',
   'https://books.toscrape.com/catalogue/tipping-the-velvet_999/index.html'
 ]
 
-const prices = await monitorPrices(urls)
+await monitorProducts(urls)
 ```
-
-This example demonstrates:
-- Handling multiple URLs
-- Error handling per URL (doesn't fail if one URL errors)
-- Timestamping data
-- Saving results to dated files
-- Rate limiting between requests
-
-## Next Steps
-
-Now that you understand the basics of domharvest-playwright, here are some ways to level up your scraping skills:
-
-1. **Explore Dynamic Content**: Learn how to handle JavaScript-heavy SPAs using direct Playwright API access
-2. **Handle Authentication**: Use Playwright's context to log in before scraping
-3. **Work with APIs**: Consider using the Network tab to find APIs that might be easier than scraping HTML
-4. **Build Robust Scrapers**: Add retry logic, better error handling, and monitoring
-5. **Scale Your Scraping**: Look into proxies and distributed scraping for large-scale projects
 
 ## Conclusion
 
-domharvest-playwright strikes an excellent balance between simplicity and power. The `harvest()` function makes quick scraping tasks trivial, while the `DOMHarvester` class and direct Playwright access give you the flexibility to handle complex scenarios.
+domharvest-playwright is more than a simple wrapper—it's a production-ready scraping solution with built-in retry logic, rate limiting, batch processing, and enhanced error handling. These features eliminate the need to build your own infrastructure around Playwright.
 
-Key takeaways:
+**Key takeaways:**
 - Use `harvest()` for simple, one-off scraping tasks
-- Use `DOMHarvester` when scraping multiple pages
+- Use `DOMHarvester` with full configuration for production
+- Leverage built-in retry logic and rate limiting
+- Use `harvestBatch()` for efficient multi-URL scraping
+- Monitor with structured logging and custom error classes
 - Always close resources with `try/finally`
-- Be respectful: add rate limiting and check `robots.txt`
-- Start with `headless: false` when debugging
 
-Whether you're building a one-off data extraction script or a production scraping pipeline, domharvest-playwright provides the tools you need without the complexity you don't.
+Whether you're building a one-off data extraction script or a production scraping pipeline, domharvest-playwright provides production-ready features out of the box.
 
 Happy harvesting!
 
@@ -616,6 +551,5 @@ Happy harvesting!
 - [GitHub Repository](https://github.com/domharvest/domharvest-playwright)
 - [npm Package](https://www.npmjs.com/package/domharvest-playwright)
 - [Full Documentation](https://domharvest.github.io/domharvest-playwright/)
-- [Practice Sites](https://toscrape.com/)
 
 *Questions or feedback? Reach out on [GitHub](https://github.com/domharvest) or [Mastodon](https://infosec.exchange/@domharvest)!*
